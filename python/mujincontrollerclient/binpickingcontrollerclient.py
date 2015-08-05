@@ -93,8 +93,10 @@ class BinpickingControllerClient(controllerclientbase.ControllerClientBase):
         taskparameters['robot'] = robotname
         taskparameters['robotControllerUri'] = self._robotControllerUri
         taskparameters['robotDeviceIOUri'] = self._robotDeviceIOUri
-        taskparameters['gripperControlInfo'] = self.gripperControlInfo 
-        
+        if taskparameters.get('gripperControlInfo', None) is None and self.gripperControlInfo is not None:
+            taskparameters['gripperControlInfo'] = self.gripperControlInfo 
+        if taskparameters.get('toolname', None) is None and self.toolname is not None:
+            taskparameters['toolname'] = self.toolname
         if taskparameters.get('speed', None) is None:
             # taskparameters does not have robotspeed, so set the global speed
             if robotspeed is not None:
@@ -136,7 +138,18 @@ class BinpickingControllerClient(controllerclientbase.ControllerClientBase):
         taskparameters.update(kwargs)
         return self.ExecuteRobotCommand(taskparameters, robotspeed=robotspeed, timeout=timeout)
     
-    def UnchuckGripper(self, toolname=None, targetname=None, robotspeed=None, timeout=10):
+    def CalibrateGripper(self, toolname=None, timeout=20, **kwargs):
+        """goes through the gripper calibration procedure
+        """
+        if toolname is None:
+            toolname = self.toolname
+        taskparameters = {'command': 'CalibrateGripper',
+                          'toolname': toolname,
+                          }
+        taskparameters.update(kwargs)
+        return self.ExecuteRobotCommand(taskparameters, timeout=timeout)
+    
+    def UnchuckGripper(self, toolname=None, targetname=None, robotspeed=None, timeout=10, **kwargs):
         """unchucks the manipulator and releases the target
         :param toolname: name of the manipulator, default is self.toolname
         :param targetname: name of the target, default is self.targetname
@@ -149,9 +162,10 @@ class BinpickingControllerClient(controllerclientbase.ControllerClientBase):
                           'toolname': toolname,
                           'targetname': targetname,
                           }
+        taskparameters.update(kwargs)
         return self.ExecuteRobotCommand(taskparameters, robotspeed=robotspeed, timeout=timeout)
     
-    def ChuckGripper(self, toolname=None, robotspeed=None, timeout=10):
+    def ChuckGripper(self, toolname=None, robotspeed=None, timeout=10, **kwargs):
         """chucks the manipulator
         :param toolname: name of the manipulator, default is self.toolname
         """
@@ -160,6 +174,7 @@ class BinpickingControllerClient(controllerclientbase.ControllerClientBase):
         taskparameters = {'command': 'ChuckGripper',
                           'toolname': toolname,
                           }
+        taskparameters.update(kwargs)
         return self.ExecuteRobotCommand(taskparameters, robotspeed=robotspeed, timeout=timeout)
     
     def GetJointValues(self, timeout=10, **kwargs):
@@ -316,7 +331,7 @@ class BinpickingControllerClient(controllerclientbase.ControllerClientBase):
         taskparameters.update(kwargs)
         return self.ExecuteRobotCommand(taskparameters, timeout=timeout)
     
-    def MoveToHandPosition(self, goaltype, goals, toolname=None, envclearance=None, closegripper=0, robotspeed=None, timeout=10):
+    def MoveToHandPosition(self, goaltype, goals, toolname=None, envclearance=None, closegripper=0, robotspeed=None, timeout=10, **kwargs):
         """Computes the inverse kinematics and moves the manipulator to any one of the goals specified.
         :param goaltype: type of the goal, e.g. translationdirection5d
         :param goals: flat list of goals, e.g. two 5d ik goals: [380,450,50,0,0,1, 380,450,50,0,0,-1]
@@ -335,6 +350,7 @@ class BinpickingControllerClient(controllerclientbase.ControllerClientBase):
                           'envclearance': envclearance,
                           'closegripper': closegripper,
                           }
+        taskparameters.update(kwargs)
         return self.ExecuteRobotCommand(taskparameters, robotspeed=robotspeed, timeout=timeout)
     
     def ComputeIK(self, timeout=10, **kwargs):
@@ -448,7 +464,7 @@ class BinpickingControllerClient(controllerclientbase.ControllerClientBase):
     # scene commands
     ####################
     
-    def IsRobotOccludingBody(self, bodyname, cameraname, timeout=10):
+    def IsRobotOccludingBody(self, bodyname, cameraname, timeout=10, **kwargs):
         """returns if the robot is occluding body in the view of the specified camera
         :param bodyname: name of the object
         :param cameraname: name of the camera
@@ -459,9 +475,10 @@ class BinpickingControllerClient(controllerclientbase.ControllerClientBase):
                           'bodyname': bodyname,
                           'cameraname': cameraname,
                           }
+        taskparameters.update(kwargs)
         return self.ExecuteCommand(taskparameters, timeout=timeout)
     
-    def GetPickedPositions(self, unit='m', timeout=10):
+    def GetPickedPositions(self, unit='m', timeout=10, **kwargs):
         """returns the poses and the timestamps of the picked objects
         :param robotname: name of the robot
         :param unit: unit of the translation
@@ -471,9 +488,10 @@ class BinpickingControllerClient(controllerclientbase.ControllerClientBase):
                           'robotname': self.robotname,
                           'unit': unit,
                           }
+        taskparameters.update(kwargs)
         return self.ExecuteCommand(taskparameters, timeout=timeout)
     
-    def UpdateObjects(self, envstate, targetname=None, state=None, unit="m", timeout=10):
+    def UpdateObjects(self, envstate, targetname=None, state=None, unit="m", timeout=10, **kwargs):
         """updates objects in the scene with the envstate
         :param envstate: a list of dictionaries for each instance object in world frame. quaternion is specified in w,x,y,z order. e.g. [{'name': 'target_0', 'translation_': [1,2,3], 'quat_': [1,0,0,0]}, {'name': 'target_1', 'translation_': [2,2,3], 'quat_': [1,0,0,0]}]
         :param unit: unit of envstate
@@ -487,11 +505,12 @@ class BinpickingControllerClient(controllerclientbase.ControllerClientBase):
                           'envstate': envstate,
                           'unit': unit,
                           }
+        taskparameters.update(kwargs)
         if state is not None:
             taskparameters['state'] = json.dumps(state)
         return self.ExecuteCommand(taskparameters, timeout=timeout)
     
-    def Grab(self, targetname, toolname=None, timeout=10):
+    def Grab(self, targetname, toolname=None, timeout=10, **kwargs):
         """grabs an object with tool
         :param targetname: name of the object
         :param robotname: name of the robot
@@ -504,18 +523,20 @@ class BinpickingControllerClient(controllerclientbase.ControllerClientBase):
                           'robotname': self.robotname,
                           'toolname': toolname,
                           }
+        taskparameters.update(kwargs)
         return self.ExecuteCommand(taskparameters, timeout=timeout)
     
-    def GetGrabbed(self, timeout=10):
+    def GetGrabbed(self, timeout=10, **kwargs):
         """gets the names of the grabbed objects
         :return: names of the grabbed object in a json dictionary, e.g. {'names': ['target_0']}
         """
         taskparameters = {'command': 'GetGrabbed',
                           'robotname': self.robotname,
                           }
+        taskparameters.update(kwargs)
         return self.ExecuteCommand(taskparameters, timeout=timeout)
     
-    def GetTransform(self, targetname, unit='mm', timeout=10):
+    def GetTransform(self, targetname, unit='mm', timeout=10, **kwargs):
         """gets the transform of an object
         :param targetname: name of the object
         :param unit: unit of the result translation
@@ -525,9 +546,10 @@ class BinpickingControllerClient(controllerclientbase.ControllerClientBase):
                           'targetname': targetname,
                           'unit': unit,
                           }
+        taskparameters.update(kwargs)
         return self.ExecuteCommand(taskparameters, timeout=timeout)
     
-    def SetTransform(self, targetname, translation, unit='mm', rotationmat=None, quaternion=None, timeout=10):
+    def SetTransform(self, targetname, translation, unit='mm', rotationmat=None, quaternion=None, timeout=10, **kwargs):
         """sets the transform of an object
         :param targetname: name of the object
         :param translation: list of x,y,z value of the object in milimeter
@@ -540,6 +562,7 @@ class BinpickingControllerClient(controllerclientbase.ControllerClientBase):
                           'unit': unit,
                           'translation': translation,
                           }
+        taskparameters.update(kwargs)
         if rotationmat is not None:
             taskparameters['rotationmat'] = rotationmat
         if quaternion is not None:
@@ -549,7 +572,7 @@ class BinpickingControllerClient(controllerclientbase.ControllerClientBase):
             log.warn('no rotation is specified, using identity quaternion ', taskparameters['quaternion'])
         return self.ExecuteCommand(taskparameters, timeout=timeout)
     
-    def GetOBB(self, targetname, unit='mm', timeout=10):
+    def GetOBB(self, targetname, unit='mm', timeout=10, **kwargs):
         """ Get the oriented bounding box of object
         :param targetname: name of the object
         :param unit: unit of the OBB
@@ -559,9 +582,26 @@ class BinpickingControllerClient(controllerclientbase.ControllerClientBase):
                           'targetname': targetname,
                           'unit': unit,
                           }
+        taskparameters.update(kwargs)
         return self.ExecuteCommand(taskparameters, timeout=timeout)
-    
-    def GetAABB(self, targetname, unit='mm', timeout=10):
+
+    def GetInnerEmptyRegionOBB(self, targetname, linkname=None, unit='mm', timeout=10, **kwargs):
+        """ Get the inner empty oriented bounding box of a container
+        :param targetname: name of the object
+        :param linkname: can target a specific link
+        :param unit: unit of the OBB
+        :return: OBB of the object
+        """
+        taskparameters = {'command': 'GetInnerEmptyRegionOBB',
+                          'targetname': targetname,
+                          'unit': unit,
+                          }
+        if linkname is not None:
+            taskparameters['linkname'] = unicode(linkname)
+        taskparameters.update(kwargs)
+        return self.ExecuteCommand(taskparameters, timeout=timeout)
+
+    def GetAABB(self, targetname, unit='mm', timeout=10, **kwargs):
         """Gets the axis aligned bounding box of object
         :param targetname: name of the object
         :param unit: unit of the AABB
@@ -571,13 +611,15 @@ class BinpickingControllerClient(controllerclientbase.ControllerClientBase):
                           'targetname': targetname,
                           'unit': unit,
                           }
+        taskparameters.update(kwargs)
         return self.ExecuteCommand(taskparameters, timeout=timeout)
     
-    def RemoveObjectsWithPrefix(self, prefix=None, prefixes=None, timeout=10):
+    def RemoveObjectsWithPrefix(self, prefix=None, prefixes=None, timeout=10, **kwargs):
         """removes objects with prefix
         """
         taskparameters = {'command': 'RemoveObjectsWithPrefix',
                           }
+        taskparameters.update(kwargs)
         if prefix is not None:
             taskparameters['prefix'] = unicode(prefix)
         if prefixes is not None:
@@ -728,7 +770,7 @@ class BinpickingControllerClient(controllerclientbase.ControllerClientBase):
         taskparameters.update(kwargs)
         return self.ExecuteCommand(taskparameters, usewebapi=usewebapi, timeout=timeout)
         
-    def MoveCameraZoomOut(self, zoommult=0.9, zoomdelta=0.02, usewebapi=False, timeout=10, **kwargs):
+    def MoveCameraZoomOut(self, zoommult=0.9, zoomdelta=20, usewebapi=False, timeout=10, **kwargs):
         taskparameters = {'command': 'MoveCameraZoomOut',
                           'zoomdelta':float(zoomdelta),
                           'zoommult': float(zoommult)
@@ -736,7 +778,7 @@ class BinpickingControllerClient(controllerclientbase.ControllerClientBase):
         taskparameters.update(kwargs)
         return self.ExecuteCommand(taskparameters, usewebapi=usewebapi, timeout=timeout)
     
-    def MoveCameraZoomIn(self, zoommult=0.9, zoomdelta=0.02, usewebapi=False, timeout=10, **kwargs):
+    def MoveCameraZoomIn(self, zoommult=0.9, zoomdelta=20, usewebapi=False, timeout=10, **kwargs):
         taskparameters = {'command': 'MoveCameraZoomIn',
                           'zoomdelta':float(zoomdelta),
                           'zoommult':float(zoommult)
@@ -744,43 +786,58 @@ class BinpickingControllerClient(controllerclientbase.ControllerClientBase):
         taskparameters.update(kwargs)
         return self.ExecuteCommand(taskparameters, usewebapi=usewebapi, timeout=timeout)
     
-    def MoveCameraLeft(self, panangle=0.1, pandelta=0.04, usewebapi=False, timeout=10, **kwargs):
+    def MoveCameraLeft(self, ispan=True, panangle=5.0, pandelta=40, usewebapi=False, timeout=10, **kwargs):
         taskparameters = {'command': 'MoveCameraLeft',
                           'pandelta':float(pandelta),
-                          'panangle':float(panangle)
+                          'panangle':float(panangle),
+                          'ispan':bool(ispan)
         }
         taskparameters.update(kwargs)
         return self.ExecuteCommand(taskparameters, usewebapi=usewebapi, timeout=timeout)
     
-    def MoveCameraRight(self, panangle=0.1, pandelta=0.04, usewebapi=False, timeout=10, **kwargs):
+    def MoveCameraRight(self, ispan=True, panangle=5.0, pandelta=40, usewebapi=False, timeout=10, **kwargs):
         taskparameters = {'command': 'MoveCameraRight',
                           'pandelta':float(pandelta),
-                          'panangle':float(panangle)
-        }
-        taskparameters.update(kwargs)
-        return self.ExecuteCommand(taskparameters, usewebapi=usewebapi, timeout=timeout)
-
-    def MoveCameraUp(self, angledelta=3.0, usewebapi=False, timeout=10, **kwargs):
-        taskparameters = {'command': 'MoveCameraUp',
-                          'angledelta':float(angledelta)
+                          'panangle':float(panangle),
+                          'ispan':bool(ispan)
         }
         taskparameters.update(kwargs)
         return self.ExecuteCommand(taskparameters, usewebapi=usewebapi, timeout=timeout)
     
-    def MoveCameraDown(self, angledelta=3.0, usewebapi=False, timeout=10, **kwargs):
-        taskparameters = {'command': 'MoveCameraDown',
-                          'angledelta':float(angledelta)
+    def MoveCameraUp(self, ispan=True, angledelta=3.0, usewebapi=False, timeout=10, **kwargs):
+        taskparameters = {'command': 'MoveCameraUp',
+                          'angledelta':float(angledelta),
+                          'ispan':bool(ispan)
         }
         taskparameters.update(kwargs)
         return self.ExecuteCommand(taskparameters, usewebapi=usewebapi, timeout=timeout)
-
-    def SetCameraTransform(self, transform, focalDistance, usewebapi=False, timeout=10, **kwargs):
+    
+    def MoveCameraDown(self, ispan=True, angledelta=3.0, usewebapi=False, timeout=10, **kwargs):
+        taskparameters = {'command': 'MoveCameraDown',
+                          'angledelta':float(angledelta),
+                          'ispan':bool(ispan)
+        }
+        taskparameters.update(kwargs)
+        return self.ExecuteCommand(taskparameters, usewebapi=usewebapi, timeout=timeout)
+    
+    def SetCameraTransform(self, pose=None, transform=None, distanceToFocus=0.0, usewebapi=False, timeout=10, **kwargs):
         """sets the camera transform
         :param transform: 4x4 matrix
         """        
         taskparameters = {'command': 'SetCameraTransform',
-                          'transform':[list(row) for row in transform],
-                          'focalDistance':float(focalDistance),
+                          'distanceToFocus':float(distanceToFocus),
+                          }
+        if transform is not None:
+            taskparameters['transform'] = [list(row) for row in transform]
+        if pose is not None:
+            taskparameters['pose'] = [float(f) for f in pose]
+        taskparameters.update(kwargs)
+        return self.ExecuteCommand(taskparameters, usewebapi=usewebapi, timeout=timeout)
+    
+    def GetCameraTransform(self, usewebapi=False, timeout=10, **kwargs):
+        """gets the camera transform, and other
+        """
+        taskparameters = {'command': 'GetCameraTransform'
                           }
         taskparameters.update(kwargs)
         return self.ExecuteCommand(taskparameters, usewebapi=usewebapi, timeout=timeout)
