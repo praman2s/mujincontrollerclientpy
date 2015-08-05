@@ -135,32 +135,6 @@ class LaserWorkerClient(controllerclientbase.ControllerClientBase):
         taskparameters.update(kwargs)
         return self.ExecuteRobotCommand(taskparameters, robotspeed=robotspeed, timeout=timeout)
     
-    def UnchuckGripper(self, toolname=None, targetname=None, robotspeed=None, timeout=10):
-        """unchucks the manipulator and releases the target
-        :param toolname: name of the manipulator, default is self.toolname
-        :param targetname: name of the target, default is self.targetname
-        """
-        if toolname is None:
-            toolname = self.toolname
-        if targetname is None:
-            targetname = self.targetname
-        taskparameters = {'command': 'UnchuckGripper',
-                          'toolname': toolname,
-                          'targetname': targetname,
-                          }
-        return self.ExecuteRobotCommand(taskparameters, robotspeed=robotspeed, timeout=timeout)
-    
-    def ChuckGripper(self, toolname=None, robotspeed=None, timeout=10):
-        """chucks the manipulator
-        :param toolname: name of the manipulator, default is self.toolname
-        """
-        if toolname is None:
-            toolname = self.toolname
-        taskparameters = {'command': 'ChuckGripper',
-                          'toolname': toolname,
-                          }
-        return self.ExecuteRobotCommand(taskparameters, robotspeed=robotspeed, timeout=timeout)
-    
     def GetJointValues(self, timeout=10, **kwargs):
         """gets the current robot joint values
         :return: current joint values in a json dictionary with
@@ -315,27 +289,7 @@ class LaserWorkerClient(controllerclientbase.ControllerClientBase):
         taskparameters.update(kwargs)
         return self.ExecuteRobotCommand(taskparameters, timeout=timeout)
     
-    def MoveToHandPosition(self, goaltype, goals, toolname=None, envclearance=None, closegripper=0, robotspeed=None, timeout=10):
-        """Computes the inverse kinematics and moves the manipulator to any one of the goals specified.
-        :param goaltype: type of the goal, e.g. translationdirection5d
-        :param goals: flat list of goals, e.g. two 5d ik goals: [380,450,50,0,0,1, 380,450,50,0,0,-1]
-        :param toolname: name of the manipulator, default is self.toolname
-        :param envclearance: clearance in milimeter, default is self.envclearance
-        :param closegripper: whether to close gripper once the goal is reached, default is 0
-        """
-        if toolname is None:
-            toolname = self.toolname
-        if envclearance is None:
-            envclearance = self.envclearance
-        taskparameters = {'command': 'MoveToHandPosition',
-                          'goaltype': goaltype,
-                          'goals': goals,
-                          'toolname': toolname,
-                          'envclearance': envclearance,
-                          'closegripper': closegripper,
-                          }
-        return self.ExecuteRobotCommand(taskparameters, robotspeed=robotspeed, timeout=timeout)
-    
+
     def ComputeIK(self, timeout=10, **kwargs):
         """
         :param toolname: tool name, string
@@ -382,30 +336,6 @@ class LaserWorkerClient(controllerclientbase.ControllerClientBase):
             taskparameters['envclearance'] = self.envclearance
         return self.ExecuteRobotCommand(taskparameters, timeout=timeout)
     
-    def InitializePartsWithPhysics(self, timeout=10, **kwargs):
-        """Start a physics simulation where the parts drop down into the bin. The method returns as soon as the physics is initialized, user has to wait for the "duration" or call StopPhysicsThread command.
-        :param targeturi: the target uri to initialize the scene with
-        :param numtargets: the number of targets to create
-        :param regionname: the container name to drop the targets into
-        :param duration: the duration in seconds to continue the physics until it is stopped.
-        :param basename: The basename to give to all the new target names. Numbers are suffixed at the end, like basename+'0134'. If not specified, will use a basename derived from the targeturi.
-        :param deleteprevious: if True, will delete all the previous targets in the scene. By default this is True.
-        """
-        taskparameters = {'command': 'InitializePartsWithPhysics',
-                          }
-        taskparameters.update(kwargs)
-        if 'containername' not in taskparameters:
-            taskparameters['containername'] = self.regionname
-        return self.ExecuteRobotCommand(taskparameters, timeout=timeout)
-    
-    def StopPhysicsThread(self, timeout=10, **kwargs):
-        """stops the physics simulation started with InitializePartsWithPhysics
-        """
-        taskparameters = {'command': 'StopPhysicsThread',
-                          }
-        taskparameters.update(kwargs)
-        return self.ExecuteRobotCommand(taskparameters, timeout=timeout)
-    
 
     def ShutdownRobotBridge(self, timeout=10, **kwargs):
         taskparameters = {'command': 'ShutdownRobotBridge',
@@ -427,28 +357,6 @@ class LaserWorkerClient(controllerclientbase.ControllerClientBase):
                           'targetname': targetname,
                           'unit': unit,
                           }
-        return self.ExecuteCommand(taskparameters, timeout=timeout)
-    
-    def SetTransform(self, targetname, translation, unit='mm', rotationmat=None, quaternion=None, timeout=10):
-        """sets the transform of an object
-        :param targetname: name of the object
-        :param translation: list of x,y,z value of the object in milimeter
-        :param unit: unit of translation
-        :param rotationmat: list specifying the rotation matrix in row major format, e.g. [1,0,0,0,1,0,0,0,1]
-        :param quaternion: list specifying the quaternion in w,x,y,z format, e.g. [1,0,0,0]
-        """
-        taskparameters = {'command': 'SetTransform',
-                          'targetname': targetname,
-                          'unit': unit,
-                          'translation': translation,
-                          }
-        if rotationmat is not None:
-            taskparameters['rotationmat'] = rotationmat
-        if quaternion is not None:
-            taskparameters['quaternion'] = quaternion
-        if rotationmat is None and quaternion is None:
-            taskparameters['quaternion'] = [1, 0, 0, 0]
-            log.warn('no rotation is specified, using identity quaternion ', taskparameters['quaternion'])
         return self.ExecuteCommand(taskparameters, timeout=timeout)
     
 
